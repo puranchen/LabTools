@@ -2,15 +2,13 @@ import pandas as pd
 
 
 class StorageContainer:
-    def __init__(self, name=None, *args, **kwargs):
+    def __init__(self, size=None, dims=None, name=None):
+        self._name = None
         self.name = name
-        attributes = ["size", "dims"]
-        for attr in attributes:
-            value = kwargs.get(attr)
-            setattr(self, f"_{attr}", None)
-            if value:
-                setattr(self, attr, value)
-
+        self._size = None
+        self.size = size
+        self._dims = None
+        self.dims = dims
         self.number_of_rows = None
         self.number_of_columns = None
         self.wells = None
@@ -42,7 +40,7 @@ class StorageContainer:
             if not isinstance(value[0], int) or not isinstance(value[1], int):
                 raise ValueError("Both dimensions must be integers")
             self._dims = value
-            self.number_of_rows, self.number_of_columns = self._dims
+
 
     def add_item(self, position, item):
         if item in self.data["id"].tolist():
@@ -64,7 +62,8 @@ class StorageContainer:
                 raise ValueError(f"Plate size '{self._size}' and dims '{self._dims}' do not match!")
         if self._dims and not self._size:
             self.size = self._dims[0] * self._dims[1]
-
+        if self._dims:
+            self.number_of_rows, self.number_of_columns = self._dims
     def instantiate_empty_container(self):
         data = pd.DataFrame(index=self.wells)
         data["id"] = None
@@ -85,9 +84,8 @@ class StorageContainer:
 class Plate(StorageContainer):
     STANDARD_FORMATS = {6: (2, 3), 12: (3, 4), 24: (4, 6), 48: (6, 8), 96: (8, 12), 384: (16, 24)}
 
-    def __init__(self, size=None, dims=None, name=None, *args, **kwargs):
-        super().__init__(size, dims, name, *args, **kwargs)
-
+    def __init__(self, size=None, dims=None, name=None):
+        super().__init__(size, dims, name)
         if not self._dims and not self._size:
             print(f"No plate information was passed.\nInitializing default plate: 96-well plate")
             self.size = 96
@@ -111,7 +109,6 @@ class Plate(StorageContainer):
         if self.number_of_columns:
             zwidth = len(str(self._size))
             self.columns = [str(i).zfill(zwidth) for i in range(1,self.number_of_columns+1)]
-
         self.wells = [a+b for a in self.rows for b in self.columns]
 
 class StorageItem:
