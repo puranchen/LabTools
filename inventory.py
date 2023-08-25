@@ -1,56 +1,23 @@
 import pandas as pd
-from typing import Tuple
 
 
 class StorageContainer:
     def __init__(self, name=None, *args, **kwargs):
         self.name = name
+        attributes = ["size", "dims"]
+        for attr in attributes:
+            value = kwargs.get(attr)
+            setattr(self, f"_{attr}", None)
+            if value:
+                setattr(self, attr, value)
+
         self.number_of_rows = None
         self.number_of_columns = None
         self.wells = None
         self.rows = None
         self.columns = None
 
-    def add_item(self, row, column, item):
-        ...
-
-    def remove_item(self, row, column, item):
-        ...
-
-    def get_item(self, row, column):
-        ...
-
-    def find_item(self, item):
-        ...
-
-    def instantiate_empty_container(self):
-        data = pd.DataFrame(index=self.wells)
-        data["id"] = None
-        self.data = data
-
-    def show(self):
-        idata = self.data.reset_index()
-        idata["row"] = idata["index"].apply(lambda x: x[0])
-        idata["column"] = idata["index"].apply(lambda x: x[1:])
-        return idata.pivot(index="row", columns="column", values="id")
-
-
-class Plate(StorageContainer):
-    STANDARD_FORMATS = {6: (2, 3), 12: (3, 4), 24: (4, 6), 48: (6, 8), 96: (8, 12), 384: (16, 24)}
-
-    def __init__(self, size=None, name=None, *args, **kwargs):
-        super().__init__(name, size, *args, **kwargs)
-        self._size = None
-        self.size = size
-        self._dims = None
-        self.dims = kwargs.get("dims")
-        if not self._dims and not self._size:
-            print(f"No plate information was passed.\nInitializing default plate: 96-well plate")
-            self.size = 96
-        self.validate_init()
-
-    def __str__(self):
-        return f"{self.size if self.size else '<UNDEFINED>'}-well plate ({self.number_of_rows if self.number_of_rows else '<UNDEFINED>'} rows x {self.number_of_columns if self.number_of_columns else '<UNDEFINED>'} columns)"
+        self.validate_container()
 
     @property
     def size(self):
@@ -77,19 +44,73 @@ class Plate(StorageContainer):
             self._dims = value
             self.number_of_rows, self.number_of_columns = self._dims
 
-    def validate_init(self):
+    def add_item(self, position, item):
+        if item in self.data["id"].tolist():
+            raise ValueError(f"Invalid name - '{item}' already exist in plate.")
+        self.data.loc[position, "id"] = item
+
+    def remove_item(self, position, item):
+        self.data.loc[position, "id"] = item
+
+    def get_item(self, position):
+        return self.data.loc[position]["id"]
+
+    def find_item(self, item):
+        return self.data[self.data.id == item].index[0]
+
+    def validate_container(self):
         if self._dims and self._size:
             if not self._dims[0] * self._dims[1] == self._size:
                 raise ValueError(f"Plate size '{self._size}' and dims '{self._dims}' do not match!")
         if self._dims and not self._size:
             self.size = self._dims[0] * self._dims[1]
+
+    def instantiate_empty_container(self):
+        data = pd.DataFrame(index=self.wells)
+        data["id"] = None
+        data.reset_index(inplace=True)
+        data["row"] = data["index"].apply(lambda x: x[0])
+        data["column"] = data["index"].apply(lambda x: x[1:])
+        data["plate_id"] = self.name
+        data.set_index("index", inplace=True)
+        self.data = data
+
+    def show(self):
+        idata = self.data.reset_index()
+        idata["row"] = idata["index"].apply(lambda x: x[0])
+        idata["column"] = idata["index"].apply(lambda x: x[1:])
+        return idata.pivot(index="row", columns="column", values="id")
+
+
+class Plate(StorageContainer):
+    STANDARD_FORMATS = {6: (2, 3), 12: (3, 4), 24: (4, 6), 48: (6, 8), 96: (8, 12), 384: (16, 24)}
+
+    def __init__(self, size=None, dims=None, name=None, *args, **kwargs):
+        super().__init__(size, dims, name, *args, **kwargs)
+
+        if not self._dims and not self._size:
+            print(f"No plate information was passed.\nInitializing default plate: 96-well plate")
+            self.size = 96
+        self.validate_plate()
+        self.instantiate_empty_container()
+
+    def __str__(self):
+        return f"{self.size if self.size else '<UNDEFINED>'}-well plate ({self.number_of_rows if self.number_of_rows else '<UNDEFINED>'} rows x {self.number_of_columns if self.number_of_columns else '<UNDEFINED>'} columns)"
+
+    def validate_plate(self):
         if not self._dims and self._size:
             if self._size not in Plate.STANDARD_FORMATS:
                 raise ValueError(f"Invalid plate size '{self._size}'. Pass valid dimensions to enforce initialization, "
                                  f"or choose one of valid plate sizes: {Plate.STANDARD_FORMATS.keys()}")
             else:
                 self.dims = Plate.STANDARD_FORMATS[self._size]
+        if self.number_of_rows:
+            self.rows = [chr(65+i) for i in range(self.number_of_rows)]
+        if self.number_of_columns:
+            zwidth = len(str(self._size))
+            self.columns = [str(i).zfill(zwidth) for i in range(1,self.number_of_columns+1)]
 
+        self.wells = [a+b for a in self.rows for b in self.columns]
 
 class StorageItem:
     def __init__(self, item_type, **kwargs):
