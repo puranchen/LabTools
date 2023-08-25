@@ -42,19 +42,26 @@ class StorageContainer:
             self._dims = value
 
 
-    def add_item(self, position, item):
+    def add_item(self, position, item, type=None):
         if item in self.data["id"].tolist():
             raise ValueError(f"Invalid name - '{item}' already exist in plate.")
         self.data.loc[position, "id"] = item
+        self.data.loc[position, "type"] = type
 
-    def remove_item(self, position, item):
-        self.data.loc[position, "id"] = item
+    def remove_item(self, position):
+        self.data.loc[position, "id"] = None
+
+    def add_type(self, position, type):
+        self.data.loc[position, "type"] = type
+
+    def remove_type(self, position):
+        self.data.loc[position, "type"] = None
 
     def get_item(self, position):
         return self.data.loc[position]["id"]
 
     def find_item(self, item):
-        return self.data[self.data.id == item].index[0]
+        return self.data[self.data.id == item].index
 
     def validate_container(self):
         if self._dims and self._size:
@@ -67,6 +74,7 @@ class StorageContainer:
     def instantiate_empty_container(self):
         data = pd.DataFrame(index=self.wells)
         data["id"] = None
+        data["type"] = None
         data.reset_index(inplace=True)
         data["row"] = data["index"].apply(lambda x: x[0])
         data["column"] = data["index"].apply(lambda x: x[1:])
@@ -74,11 +82,11 @@ class StorageContainer:
         data.set_index("index", inplace=True)
         self.data = data
 
-    def show(self):
+    def show(self, values="id"):
         idata = self.data.reset_index()
         idata["row"] = idata["index"].apply(lambda x: x[0])
         idata["column"] = idata["index"].apply(lambda x: x[1:])
-        return idata.pivot(index="row", columns="column", values="id")
+        return idata.pivot(index="row", columns="column", values=values)
 
 
 class Plate(StorageContainer):
@@ -111,33 +119,5 @@ class Plate(StorageContainer):
             self.columns = [str(i).zfill(zwidth) for i in range(1,self.number_of_columns+1)]
         self.wells = [a+b for a in self.rows for b in self.columns]
 
-class StorageItem:
-    def __init__(self, item_type, **kwargs):
-
-        attributes = ["format",
-                      "volume",
-                      "concentration",
-                      "concentration_unit",
-                      "weight",
-                      "weight_unit",
-                      "expiry_date",
-                      "last_modified"]
-
-        self.item_type = item_type
-        for attr in attributes:
-            setattr(self, attr, None)
-            value = kwargs.get(attr)
-            if value:
-                setattr(self, attr, value)
-
-    def get_details(self):
-        return {
-            "Item Type": self.item_type,
-            "Volume": self.volume,
-            "Concentration": str(self.concentration) + self.concentration_unit,
-            "Weight": str(self.weight) + self.weight_unit,
-            "Expiry Date": self.expiry_date,
-            "Last Modified": self.lastmodified_date
-        }
 
 # %%
