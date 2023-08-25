@@ -95,7 +95,9 @@ class Plate(StorageContainer):
         self.instantiate_empty_container()
 
     def __str__(self):
-        return f"{self.size if self.size else '<UNDEFINED>'}-well plate ({self.number_of_rows if self.number_of_rows else '<UNDEFINED>'} rows x {self.number_of_columns if self.number_of_columns else '<UNDEFINED>'} columns)"
+        return (f"{self.size if self.size else '<UNDEFINED>'}-well plate "
+                f"({self.number_of_rows if self.number_of_rows else '<UNDEFINED>'} rows x "
+                f"{self.number_of_columns if self.number_of_columns else '<UNDEFINED>'} columns)")
 
     def validate_plate(self):
         if not self._dims and self._size:
