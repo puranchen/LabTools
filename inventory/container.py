@@ -2,6 +2,7 @@ import pandas as pd
 
 
 class StorageContainer:
+    
     def __init__(self, size=None, dims=None, name=None):
         self._name = None
         self.name = name
@@ -41,15 +42,16 @@ class StorageContainer:
                 raise ValueError("Both dimensions must be integers")
             self._dims = value
 
-
     def add_item(self, position, item, type=None):
         if item in self.data["id"].tolist():
             raise ValueError(f"Invalid name - '{item}' already exist in plate.")
         self.data.loc[position, "id"] = item
         self.data.loc[position, "type"] = type
 
-    def remove_item(self, position):
+    def remove_item(self, position, greedy=False):
         self.data.loc[position, "id"] = None
+        if greedy:
+            self.data.loc[position, "type"] = None
 
     def add_type(self, position, type):
         self.data.loc[position, "type"] = type
@@ -71,6 +73,7 @@ class StorageContainer:
             self.size = self._dims[0] * self._dims[1]
         if self._dims:
             self.number_of_rows, self.number_of_columns = self._dims
+
     def instantiate_empty_container(self):
         data = pd.DataFrame(index=self.wells)
         data["id"] = None
