@@ -85,6 +85,9 @@ class StorageContainer:
         data.set_index("index", inplace=True)
         self.data = data
 
+    def count_empty(self, on="type"):
+        return self.show(values=on).isna().sum().sum()
+
     def show(self, values="id"):
         idata = self.data.reset_index()
         idata["row"] = idata["index"].apply(lambda x: x[0])
